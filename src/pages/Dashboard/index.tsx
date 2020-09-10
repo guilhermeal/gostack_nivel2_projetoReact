@@ -4,7 +4,7 @@ import api from '../../services/api';
 
 import logoImg from '../../assets/logo.svg';
 
-import { Title, Form, Repositories } from './styles';
+import { Title, Form, Repositories, Error } from './styles';
 
 interface Repository {
   full_name: string;
@@ -17,6 +17,7 @@ interface Repository {
 
 const Dashboard: React.FC = () => {
   const [newRepo, setNewRepo] = useState('');
+  const [inputError, setInputError] = useState('');
   const [repositories, setRepositories] = useState<Repository[]>([]);
 
   async function handleAddRepository(
@@ -27,12 +28,24 @@ const Dashboard: React.FC = () => {
     // Savlar novo repositorio no state
 
     event.preventDefault();
-    const response = await api.get<Repository>(`repos/${newRepo}`);
 
-    const repository = response.data;
+    if (!newRepo) {
+      setInputError('Digite  o autor/nome do repositório');
+      return;
+    }
 
-    setRepositories([...repositories, repository]);
-    setNewRepo('');
+    try {
+      const response = await api.get<Repository>(`repos/${newRepo}`);
+
+      const repository = response.data;
+
+      setRepositories([...repositories, repository]);
+
+      setNewRepo('');
+      setInputError('');
+    } catch (error) {
+      setInputError('Repositório não encontrado com os dados informados!');
+    }
   }
 
   return (
@@ -40,7 +53,7 @@ const Dashboard: React.FC = () => {
       <img src={logoImg} alt="Github Explorer" />
       <Title>Explore repositórios no Github</Title>
 
-      <Form onSubmit={handleAddRepository}>
+      <Form hasError={!!inputError} onSubmit={handleAddRepository}>
         <input
           type="text"
           placeholder="Digite o nome do repositório"
@@ -50,22 +63,26 @@ const Dashboard: React.FC = () => {
         <button type="submit">Pesquisar</button>
       </Form>
 
+      {inputError && <Error>{inputError}</Error>}
+
       <Repositories>
-        {repositories.map(repository => (
-          <a key={repository.full_name} href="teste">
-            <img
-              src={repository.owner.avatar_url}
-              alt={repository.owner.login}
-            />
+        {repositories
+          .map(repository => (
+            <a key={repository.full_name} href="teste">
+              <img
+                src={repository.owner.avatar_url}
+                alt={repository.owner.login}
+              />
 
-            <div>
-              <strong>{repository.full_name}</strong>
-              <p>{repository.description}</p>
-            </div>
+              <div>
+                <strong>{repository.full_name}</strong>
+                <p>{repository.description}</p>
+              </div>
 
-            <FiChevronRight size={20} />
-          </a>
-        ))}
+              <FiChevronRight size={20} />
+            </a>
+          ))
+          .reverse()}
       </Repositories>
     </>
   );
